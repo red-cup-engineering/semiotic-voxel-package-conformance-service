@@ -143,16 +143,19 @@ export async function assaySemioticVoxelPackageBody({ root = process.cwd() } = {
   let carriers = 0;
   for (const path of inventory.manifests) {
     const manifest = JSON.parse(await readFile(resolve(absoluteRoot, path), "utf8"));
-    if (typeof manifest.name !== "string" || manifest.name.length === 0) continue;
-    carriers += 1;
-    if (!/^@[a-z0-9-]+\/[a-z0-9._-]+$/u.test(manifest.name) || manifest.name.startsWith("@emsenn/")) defects.push({ law: "sovereign-owner-identity", path, package: manifest.name });
-    const descriptorViolations = semioticVoxelPackageDescriptorViolations(manifest);
-    if (descriptorViolations.length) defects.push({
-      law: "package-deployment-carrier-descriptor",
-      path,
-      package: manifest.name,
-      violations: descriptorViolations,
-    });
+    if (typeof manifest.name === "string" && manifest.name.length > 0) {
+      carriers += 1;
+      if (!/^@[a-z0-9-]+\/[a-z0-9._-]+$/u.test(manifest.name) || manifest.name.startsWith("@emsenn/")) defects.push({ law: "sovereign-owner-identity", path, package: manifest.name });
+      const descriptorViolations = semioticVoxelPackageDescriptorViolations(manifest);
+      if (descriptorViolations.length) defects.push({
+        law: "package-deployment-carrier-descriptor",
+        path,
+        package: manifest.name,
+        violations: descriptorViolations,
+      });
+    }
+    // Anonymous module boundaries are not carrier descriptors, but their
+    // dependencies still declare provider identities and install protocols.
     for (const field of DEPENDENCY_FIELDS) {
       for (const [dependency, value] of Object.entries(manifest[field] ?? {})) {
         if (dependency.startsWith("@emsenn/")) defects.push({ law: "sovereign-provider-identity", path, field, dependency });
