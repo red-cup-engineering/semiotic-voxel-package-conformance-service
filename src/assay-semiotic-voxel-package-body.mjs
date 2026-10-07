@@ -72,8 +72,15 @@ function excludedTerritory(path) {
     || framed.includes("/dev/content/triage/prior-app/");
 }
 
+function incompleteInventory(paths) {
+  return Object.assign(new Error("semiotic voxel package body inventory incomplete: unsupported symbolic link(s)"), {
+    code: "ERR_PACKAGE_BODY_INVENTORY_INCOMPLETE",
+    paths: Object.freeze([...new Set(paths)].sort()),
+  });
+}
+
 async function packageBodyInventory(root) {
-  const inventory = { manifests: [], workspaces: [], pnpmLocks: [], packageLocks: [], crossInstallLinks: [] };
+  const inventory = { manifests: [], workspaces: [], pnpmLocks: [], packageLocks: [], crossInstallLinks: [], unsupportedLinks: [] };
   async function inspectInstallEntry(installRoot, absolute, path) {
     if (!(await lstat(absolute)).isSymbolicLink()) return;
     const target = resolve(dirname(absolute), await readlink(absolute));
@@ -93,6 +100,12 @@ async function packageBodyInventory(root) {
       const entryPath = path ? `${path}/${entry.name}` : entry.name;
       if (excludedTerritory(entryPath)) continue;
       const entryAbsolute = join(absolute, entry.name);
+      // Material links need an explicit traversal contract. Do not follow them
+      // or certify a partial inventory as complete; deliberate exclusions remain.
+      if (entry.isSymbolicLink()) {
+        if (!SKIP_DIRECTORY.has(entry.name)) inventory.unsupportedLinks.push(entryPath);
+        continue;
+      }
       if (entry.isDirectory()) {
         if (SKIP_DIRECTORY.has(entry.name)) continue;
         if (entry.name === "node_modules") await inspectInstallRoot(entryAbsolute, entryPath);
@@ -103,11 +116,21 @@ async function packageBodyInventory(root) {
       else if (entry.name === "package-lock.json") inventory.packageLocks.push(entryPath);
     }
   }
-  await visit(resolve(root, "lib/emsenn/services"), "lib/emsenn/services");
+  let territory = root;
+  let territoryPath = "";
+  for (const part of ["lib", "emsenn", "services"]) {
+    territory = join(territory, part);
+    territoryPath = territoryPath ? `${territoryPath}/${part}` : part;
+    if ((await lstat(territory)).isSymbolicLink()) throw incompleteInventory([territoryPath]);
+  }
+  await visit(territory, territoryPath);
+  if (inventory.unsupportedLinks.length) throw incompleteInventory(inventory.unsupportedLinks);
   for (const values of Object.values(inventory)) if (Array.isArray(values)) values.sort((left, right) => String(left.path ?? left).localeCompare(String(right.path ?? right)));
   return inventory;
 }
 
+// Unsupported links are an inventory failure, not evidence of a bad owner or
+// a conformance-law violation. No conformance receipt is issued for that scan.
 export async function assaySemioticVoxelPackageBody({ root = process.cwd() } = {}) {
   const absoluteRoot = resolve(root);
   const defects = [];
