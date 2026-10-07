@@ -226,3 +226,73 @@ test("CLI keeps complete conformance receipts separate from incomplete-inventory
   assert.match(failure.error, /inventory incomplete/);
   assert.equal(Object.hasOwn(failure, "conformant"), false);
 });
+
+test("anonymous manifests cannot bypass existing local dependency protocol checks", async (context) => {
+  const fixture = await inventoryFixture(context);
+  for (const field of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+    for (const value of ["workspace:*", "file:../provider", "link:../provider"]) {
+      await writeFile(join(fixture.material, "package.json"), JSON.stringify({
+        type: "module", [field]: { "@red-cup-engineering/provider": value },
+      }));
+      await assert.rejects(() => assaySemioticVoxelPackageBody(fixture), (error) => {
+        assert.equal(error.receipt.conformant, false);
+        assert.equal(error.receipt.carriers, 0);
+        assert.deepEqual(error.receipt.defects, [{
+          law: "no-local-provider-protocol", path: `${carrier}/package.json`,
+          field, dependency: "@red-cup-engineering/provider", value,
+        }]);
+        return true;
+      });
+    }
+  }
+});
+
+test("anonymous manifests retain provider-identity checks without becoming carrier descriptors", async (context) => {
+  const fixture = await inventoryFixture(context);
+  await writeFile(join(fixture.material, "package.json"), JSON.stringify({
+    type: "module", dependencies: { "@emsenn/provider": "1.0.0" },
+  }));
+  await assert.rejects(() => assaySemioticVoxelPackageBody(fixture), (error) => {
+    assert.equal(error.receipt.carriers, 0);
+    assert.deepEqual(error.receipt.defects, [{
+      law: "sovereign-provider-identity", path: `${carrier}/package.json`,
+      field: "dependencies", dependency: "@emsenn/provider",
+    }]);
+    return true;
+  });
+});
+
+test("anonymous type boundaries and ordinary dependency versions remain admitted", async (context) => {
+  const fixture = await inventoryFixture(context);
+  for (const manifest of [
+    { type: "module" },
+    { private: true, type: "module", dependencies: { "@red-cup-engineering/provider": "1.2.3" } },
+  ]) {
+    await writeFile(join(fixture.material, "package.json"), JSON.stringify(manifest));
+    assert.deepEqual(await assaySemioticVoxelPackageBody(fixture), {
+      type: "SemioticVoxelPackageBodyConformanceReceipt", version: 1,
+      conformant: true, carriers: 0, defects: [],
+    });
+  }
+});
+
+test("named manifests preserve carrier count and existing defect ordering", async (context) => {
+  const fixture = await inventoryFixture(context);
+  await writeFile(join(fixture.material, "package.json"), JSON.stringify({
+    name: "@emsenn/example", dependencies: { "@emsenn/provider": "workspace:*" },
+  }));
+  await assert.rejects(() => assaySemioticVoxelPackageBody(fixture), (error) => {
+    const path = `${carrier}/package.json`;
+    assert.deepEqual(error.receipt, {
+      type: "SemioticVoxelPackageBodyConformanceReceipt", version: 1,
+      conformant: false, carriers: 1,
+      defects: [
+        { law: "sovereign-owner-identity", path, package: "@emsenn/example" },
+        { law: "package-deployment-carrier-descriptor", path, package: "@emsenn/example", violations: ["descriptor-object"] },
+        { law: "sovereign-provider-identity", path, field: "dependencies", dependency: "@emsenn/provider" },
+        { law: "no-local-provider-protocol", path, field: "dependencies", dependency: "@emsenn/provider", value: "workspace:*" },
+      ],
+    });
+    return true;
+  });
+});
