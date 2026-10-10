@@ -1,5 +1,6 @@
 import { access, lstat, readFile, readdir, readlink } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { isObjectRecord } from "@red-cup-engineering/json-services-section";
 
 const PROFILE = "org.harmonious-union.semiotic-voxel.v1";
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
@@ -8,9 +9,7 @@ const DESCRIPTOR_FIELDS = Object.freeze(["actor", "capabilities", "kind", "opera
 const CAPABILITY_FIELDS = Object.freeze(["capability", "faces"]);
 const PACKAGE_KINDS = new Set(["actor", "aggregate-capability-defect", "capability-cell", "inert-material"]);
 
-function record(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+const record = isObjectRecord;
 
 function hasExactFields(value, fields) {
   return Object.keys(value).sort().join(",") === fields.join(",");
