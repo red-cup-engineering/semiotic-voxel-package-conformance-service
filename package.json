@@ -15,6 +15,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@red-cup-engineering/json-services-section": "1.0.0"
+    "@red-cup-engineering/json-services-section": "workspace:*"
   }
 }
