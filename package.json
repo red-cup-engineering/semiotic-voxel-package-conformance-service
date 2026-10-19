@@ -4,8 +4,7 @@
   "description": "Validates x-semiotic-voxel as an exact package/deployment carrier descriptor and refuses package bodies that restore workspace authority, local dependency protocols, or ownerless identities.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/red-cup-engineering/semiotic-computer-system-services-section.git",
-    "directory": "services/semiotic-voxel-package-conformance-service"
+    "url": "git+https://github.com/red-cup-engineering/semiotic-voxel-package-conformance-service.git"
   },
   "type": "module",
   "license": "MIT",
