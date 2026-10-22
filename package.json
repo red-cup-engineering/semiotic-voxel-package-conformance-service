@@ -20,5 +20,9 @@
   },
   "dependencies": {
     "@red-cup-engineering/json-services-section": "workspace:*"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/561-group/.github/blob/main/TIPS.md"
   }
 }
