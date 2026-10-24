@@ -19,7 +19,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@red-cup-engineering/json-services-section": "workspace:*"
+    "@red-cup-engineering/json-engineering-services-section": "workspace:*"
   },
   "funding": {
     "type": "individual",
